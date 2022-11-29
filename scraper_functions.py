@@ -301,7 +301,7 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     # Get the location 
     raw_location = cells[2].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     location = raw_location.split('&nbsp')[0]
-    fatal_dict['location'] = location
+    fatal_dict['location'] = location.replace('&amp;', '&')
 
     # Get the city 
     raw_city = cells[3].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')

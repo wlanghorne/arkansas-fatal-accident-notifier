@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from scraper_functions import get_old_fatal, open_fatal_log, get_latest_fatal, to_update_fatals, write_latest_fatal, get_latest_data
+from writer_functions import gen_msg
 from time import sleep
 from datetime import date
 import csv
@@ -47,7 +48,7 @@ open_fatal_log(driver, url)
 latest_fatal_num, latest_fatal_link = get_latest_fatal(driver)
 
 # LINK CHANGE FOR TESTING PURPOSES 
-latest_fatal_link = 'https://www.ark.org/asp-fatal/index.php?do=view_reports&accident_number=214&year_rec=2022'
+latest_fatal_link = 'https://www.ark.org/asp-fatal/index.php?do=view_reports&accident_number=175&year_rec=2022'
 
 # Compare the last fatal to the latest fatal. Program with exit if updating is not required
 to_update_fatals(old_fatal_num, latest_fatal_num, driver)
@@ -56,9 +57,10 @@ to_update_fatals(old_fatal_num, latest_fatal_num, driver)
 write_latest_fatal(latest_fatal_num, old_fatal_path)
 
 # Open latest fatal file and get info
-latest_fatal_dict = get_latest_data(driver, latest_fatal_num, latest_fatal_link)
+fatal_dict = get_latest_data(driver, latest_fatal_num, latest_fatal_link)
 
-print(latest_fatal_dict)
+# Take all the info for the latest fatal file and process it into a message that can sent via email
+gen_msg(fatal_dict, driver)
 
 # Quit driver 
 driver.quit()
