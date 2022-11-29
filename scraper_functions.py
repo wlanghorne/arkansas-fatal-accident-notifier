@@ -85,11 +85,12 @@ def get_victim_role(cells):
     for cell in cells: 
         if 'X' in cell.get_attribute('innerHTML'):
             if counter == 0:
-                return 'driver'
+                return 'DRIVER'
             elif counter == 1: 
-                return 'passenger'
+                return 'PASSENGER'
             else:
-                return 'pedestrian'
+                return 'PEDESTRIAN'
+        counter += 1
 
 # get data from victim (deceased or injured) tables
 def get_victim_tables(rows):
@@ -114,7 +115,7 @@ def get_victim_tables(rows):
         role = get_victim_role(cells[4:6])
 
         # Put data into dictionary 
-        victim_dict[deceased_name] = {'vehicle_num': deceased_vehicle_num, 'age': deceased_age, 'city_of_res': city_of_res, 'sex': sex, 'role': role}
+        victim_dict[deceased_name] = {'VEHICLE': deceased_vehicle_num, 'AGE': deceased_age, 'RESIDENCE': city_of_res, 'M/F': sex, 'ROLE': role}
 
     return victim_dict
 
@@ -127,18 +128,44 @@ def get_additional_victims(row):
     except: 
         return False
     else: 
-        data = cell.get_attribute('innerHTML').strip().split(':')[:-1]
-        data_lists = []
+        # Clean data string
+        data = cell.get_attribute('innerHTML').strip().split(' ')
+        data = list(filter(None, data))
 
-        victim_num = len(data)/7
+        # List containing the expected order of variables for each victim
+        data_vars = ['NAME:', 'AGE:', 'RESIDENCE:', 'M/F:', 'DRIVER:', 'PASSENGER:', 'PEDESTRIAN:']
+        curr_var = 'NAME:'
+
+        # Dictionary to hold info in individual victims, a variable to hold the data for the current variable and a variable to hold the victim's name
+        victim_data = {}
+        curr_data = ''
+        name = ''
         
-        for i in victim_num:
-            start  
+        # Iterate through data using variable names as markers 
+        for i in data:
+            # Check to see if reached vechile number
+            if curr_var == 'NAME:': 
+                if '(' in i:
+                    name = curr_data
+                    victim_data[name] = {}
+                    victim_data[name]['VEHICLE'] = ''.join(n for n in i if n.isdigit())
+            # Get the current variable to log 
+            if i in data_vars: 
+                if curr_var in ['AGE:', 'RESIDENCE:', 'M/F:']:
+                    victim_data[name][curr_var.strip(':')] = curr_data
+                elif curr_var in ['DRIVER:', 'PASSENGER:', 'PEDESTRIAN:']:
+                    if 'X' in curr_data:
+                        victim_data[name]['ROLE'] = curr_var.strip(':')
+                curr_var = i
+                curr_data = ''
+            # Append new entry to current data 
+            else: 
+                if curr_data:
+                    curr_data = curr_data + ' ' + i
+                else: 
+                    curr_data = i
 
-
-        return {'person': 'data'}
-
-
+        return victim_data
 
 # Open link to and get information on the latest fatal accident 
 def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
