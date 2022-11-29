@@ -167,6 +167,32 @@ def get_additional_victims(row):
 
         return victim_data
 
+def get_vehicle_data(rows): 
+    # Iterate through rows and pull data out of cells 
+    vehicle_dict = {}
+    row_count = 0
+    for row in rows:
+        cells = row.find_elements(By.CSS_SELECTOR, 'td')
+
+        # Can expect up to 2 car per row
+        for i in range(1,3): 
+            start_pos = ((i-1)*5) + 1
+            vehicle_counter = str(i + row_count*2)
+            
+            # ensure there is data in cells
+            try:
+                vehicle_make = cells[start_pos].get_attribute('innerHTML').strip()
+            except Exception as e:
+                break
+
+            # Can expect 2 vehicle entries per row 
+            vehicle_dict[vehicle_counter] = {}
+            vehicle_dict[vehicle_counter]['MAKE'] = vehicle_make
+            vehicle_dict[vehicle_counter]['YEAR'] = cells[start_pos + 1].get_attribute('innerHTML').strip()
+            vehicle_dict[vehicle_counter]['HWY'] = cells[start_pos + 2].get_attribute('innerHTML').strip()
+        row_count += 1 
+    return vehicle_dict
+
 # Open link to and get information on the latest fatal accident 
 def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
 
@@ -259,8 +285,7 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     # Pull data from eighth content table 
     rows = content_tables[7].find_elements(By.CSS_SELECTOR, 'tr')
 
+    # Get vehicle data 
+    fatal_data['vehicles'] = get_vehicle_data(rows[1:])
+
     print(fatal_data)
-
-
-
-
