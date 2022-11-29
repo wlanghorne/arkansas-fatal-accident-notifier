@@ -133,39 +133,45 @@ def get_additional_victims(row):
         data = list(filter(None, data))
 
         # List containing the expected order of variables for each victim
-        data_vars = ['NAME:', 'AGE:', 'RESIDENCE:', 'M/F:', 'DRIVER:', 'PASSENGER:', 'PEDESTRIAN:']
-        curr_var = 'NAME:'
+        data_vars = ['NAME', 'AGE', 'RESIDENCE', 'M/F', 'DRIVER', 'PASSENGER', 'PEDESTRIAN']
+        curr_var = 'NAME'
 
         # Dictionary to hold info in individual victims, a variable to hold the data for the current variable and a variable to hold the victim's name
-        victim_data = {}
+        victim_dict = {}
         curr_data = ''
         name = ''
         
         # Iterate through data using variable names as markers 
-        for i in data:
+        data_length = len(data)
+        for n in range(data_length):
+            i = data[n].strip(':')
             # Check to see if reached vechile number
-            if curr_var == 'NAME:': 
+            if 'NAME' in curr_var: 
                 if '(' in i:
                     name = curr_data
-                    victim_data[name] = {}
-                    victim_data[name]['VEHICLE'] = ''.join(n for n in i if n.isdigit())
-            # Get the current variable to log 
-            if i in data_vars: 
-                if curr_var in ['AGE:', 'RESIDENCE:', 'M/F:']:
-                    victim_data[name][curr_var.strip(':')] = curr_data
-                elif curr_var in ['DRIVER:', 'PASSENGER:', 'PEDESTRIAN:']:
-                    if 'X' in curr_data:
-                        victim_data[name]['ROLE'] = curr_var.strip(':')
-                curr_var = i
-                curr_data = ''
+                    victim_dict[name] = {}
+                    victim_dict[name]['VEHICLE'] = ''.join(n for n in i if n.isdigit())
+            # Get log curr_data if reach a new variable or the end of the list
+            has_new_var = False
+            for var in data_vars:
+                if var in i or data_length - n == 1: 
+                    if curr_var in ['AGE', 'RESIDENCE', 'M/F']:
+                        victim_dict[name][curr_var] = curr_data
+                    elif curr_var in ['DRIVER', 'PASSENGER', 'PEDESTRIAN']:
+                        if 'X' in curr_data:
+                            victim_dict[name]['ROLE'] = curr_var
+                    curr_var = i
+                    curr_data = ''
+                    has_new_var = True
+                    break
             # Append new entry to current data 
-            else: 
+            if not has_new_var: 
                 if curr_data:
                     curr_data = curr_data + ' ' + i
                 else: 
                     curr_data = i
 
-        return victim_data
+        return victim_dict
 
 def get_vehicle_data(rows): 
     # Iterate through rows and pull data out of cells 
@@ -187,11 +193,72 @@ def get_vehicle_data(rows):
 
             # Can expect 2 vehicle entries per row 
             vehicle_dict[vehicle_counter] = {}
-            vehicle_dict[vehicle_counter]['MAKE'] = vehicle_make
+            vehicle_dict[vehicle_counter]['VEHICLE'] = vehicle_make
             vehicle_dict[vehicle_counter]['YEAR'] = cells[start_pos + 1].get_attribute('innerHTML').strip()
+            vehicle_dict[vehicle_counter]['DIRECTION'] = cells[start_pos + 2].get_attribute('innerHTML').strip()
             vehicle_dict[vehicle_counter]['HWY'] = cells[start_pos + 2].get_attribute('innerHTML').strip()
         row_count += 1 
     return vehicle_dict
+
+# Get additional vehicle data stored for some reason in a different format in tables seperate from the other victim tables
+def get_additional_vehicles(row):
+
+    # Try to get cell within row. If there is no cell, there is no additional data to write 
+    try:
+        cell = row.find_element(By.CSS_SELECTOR, 'td')
+    except: 
+        return False
+    else: 
+        # Clean data string
+        data = cell.get_attribute('innerHTML').strip().split(' ')
+        data = list(filter(None, data))
+        data = list(filter(lambda val: val != ':', data))
+
+        # List containing the expected order of variables for each victim
+        data_vars = ['VEHICLE', 'YEAR', 'DIRECTION', 'HWY']
+        curr_var = data_vars[0]
+
+        # Dictionary to hold info in individual victims, a variable to hold the data for the current variable and a variable to hold the victim's name
+        vehicle_dict = {}
+        curr_data = ''
+        vehicle = ''
+        
+        # Iterate through data using variable names as markers 
+        data_length = len(data)
+        for n in range(data_length):
+            i = data[n].strip(':')
+            
+            # Check to see if reached vechile number
+            if 'VEHICLE' in curr_var: 
+                if '(' in i:
+                    vehicle = curr_data
+                    vehicle_num = ''.join(n for n in i if n.isdigit())
+                    vehicle_dict[vehicle_num] = {}
+                    vehicle_dict[vehicle_num]['VEHICLE'] = vehicle
+            
+            # Get the current variable to log
+            has_new_var = False 
+            for var in data_vars:
+                if var in i: 
+                    if 'VEHICLE' not in curr_var:
+                        vehicle_dict[vehicle_num][curr_var] = curr_data
+                    curr_var = i
+                    curr_data = ''
+                    has_new_var = True
+                    break
+            
+            # Append new entry to current data 
+            if not has_new_var: 
+                if curr_data:
+                    curr_data = curr_data + ' ' + i
+                else: 
+                    curr_data = i
+            # If there are no more items in the list, add curr_data to the dictionary 
+            if data_length - n == 1: 
+                 vehicle_dict[vehicle_num][curr_var] = curr_data
+
+        return vehicle_dict 
+
 
 # Open link to and get information on the latest fatal accident 
 def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
@@ -203,7 +270,7 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     #latest_fatal_link.click()
 
     # Create a dictionary to store data from the latest fatal
-    fatal_data = {'fatal_num': latest_fatal_num}
+    fatal_dict = {'fatal_num': latest_fatal_num}
 
     # Nagivate to content links
     content_area = driver.find_element(By.CLASS_NAME, 'contentArea')
@@ -216,17 +283,7 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     # Get the accident number
     raw_accident_num = cells[0].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     accident_num = raw_accident_num.split('&nbsp')[0]
-    fatal_data['accident_num'] = accident_num
-
-    # Get the number deceased
-    raw_deceased_num = cells[2].get_attribute('innerHTML')
-    deceased_num = ''.join(n for n in raw_deceased_num if n.isdigit())
-    fatal_data['deceased_num'] = deceased_num
-
-    # Get the number injured
-    raw_injured_num = cells[3].get_attribute('innerHTML')
-    injured_num  = ''.join(n for n in raw_injured_num if n.isdigit())
-    fatal_data['injured_num'] = injured_num
+    fatal_dict['accident_num'] = accident_num
 
     # Pull data from third content table
     cells = content_tables[2].find_elements(By.CSS_SELECTOR, 'td')
@@ -234,58 +291,67 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     # Get the date 
     raw_date = cells[0].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     date = raw_date.split('&nbsp')[0]
-    fatal_data['date'] = date
+    fatal_dict['date'] = date
 
     # Get the time
     raw_time = cells[1].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     time = raw_time.split('&nbsp')[0]
-    fatal_data['time'] = time
+    fatal_dict['time'] = time
 
     # Get the location 
     raw_location = cells[2].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     location = raw_location.split('&nbsp')[0]
-    fatal_data['location'] = location
+    fatal_dict['location'] = location
 
     # Get the city 
     raw_city = cells[3].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     city = raw_city.split('&nbsp')[0]
-    fatal_data['city'] = city
+    fatal_dict['city'] = city
 
     # Get the county 
     raw_county = cells[4].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML')
     county = raw_county.split('&nbsp')[0]
-    fatal_data['county'] = county
+    fatal_dict['county'] = county
 
     # Pull data from fourth content table (data on those who died in accident)
     rows = content_tables[3].find_elements(By.CSS_SELECTOR, 'tr')
 
     # Get deceased data 
-    fatal_data['deceased'] = get_victim_tables(rows[1:-1])
+    fatal_dict['deceased'] = get_victim_tables(rows[1:-1])
 
     # Pull data from fifth content table (additional data on those who died in accident)
     rows = content_tables[4].find_elements(By.CSS_SELECTOR, 'tr')
     add_deceased = get_additional_victims(rows[1])
 
     if add_deceased: 
-        fatal_data['deceased'].update(add_deceased)
+        fatal_dict['deceased'].update(add_deceased)
 
     # Pull data from sixth content table (data on those injured in accident)
     rows = content_tables[5].find_elements(By.CSS_SELECTOR, 'tr')
 
     # Get injured data 
-    fatal_data['injured'] = get_victim_tables(rows[1:-1])
+    fatal_dict['injured'] = get_victim_tables(rows[1:-1])
 
     # Pull data from seventh content table 
     rows = content_tables[6].find_elements(By.CSS_SELECTOR, 'tr')
     add_injuried = get_additional_victims(rows[1])
 
     if add_injuried:
-        fatal_data['injured'].update(add_injuried)
+        fatal_dict['injured'].update(add_injuried)
 
     # Pull data from eighth content table 
     rows = content_tables[7].find_elements(By.CSS_SELECTOR, 'tr')
 
     # Get vehicle data 
-    fatal_data['vehicles'] = get_vehicle_data(rows[1:])
+    fatal_dict['vehicles'] = get_vehicle_data(rows[1:])
 
-    print(fatal_data)
+    # Pull data from ninth content table (additional vehicles)
+    rows = content_tables[8].find_elements(By.CSS_SELECTOR, 'tr')
+
+    # Get additional vehicle data 
+    add_vehicles = get_additional_vehicles(rows[1])
+
+    if add_vehicles:
+        fatal_dict['vehicles'].update(add_vehicles)
+
+    print(fatal_dict)
