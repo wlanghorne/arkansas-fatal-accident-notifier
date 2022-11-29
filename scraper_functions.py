@@ -354,4 +354,22 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     if add_vehicles:
         fatal_dict['vehicles'].update(add_vehicles)
 
-    print(fatal_dict)
+    # Pull data from tenth content table (narrative details)
+    rows = content_tables[9].find_elements(By.CSS_SELECTOR, 'tr')
+
+    # Get intial narrative 
+    narrative = rows[0].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML').strip().replace('&nbsp;', '')
+    fatal_dict['narrative'] = narrative
+
+    # Get conditions
+    conditions = rows[2].find_elements(By.CSS_SELECTOR, 'td')
+    weather_conditions = conditions[0].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML').strip().replace('&nbsp;', '')
+    road_conditions = conditions[1].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML').strip().replace('&nbsp;', '')
+    fatal_dict['weather_conditions'] = weather_conditions
+    fatal_dict['road_conditions'] = road_conditions
+
+    # Get hospital
+    hospital = rows[4].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML').strip().replace('&nbsp;', '')
+    fatal_dict['hospital'] = hospital
+
+    return(fatal_dict)  

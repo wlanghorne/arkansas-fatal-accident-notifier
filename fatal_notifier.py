@@ -55,8 +55,10 @@ to_update_fatals(old_fatal_num, latest_fatal_num, driver)
 # Write latest fatal to last fatal file
 write_latest_fatal(latest_fatal_num, old_fatal_path)
 
-# Open latest fatal file
-latest_fatal_data = get_latest_data(driver, latest_fatal_num, latest_fatal_link)
+# Open latest fatal file and get info
+latest_fatal_dict = get_latest_data(driver, latest_fatal_num, latest_fatal_link)
+
+print(latest_fatal_dict)
 
 # Quit driver 
 driver.quit()
