@@ -18,21 +18,19 @@ def news_num_convert(num):
 # Converts location to style format 
 def location_convert(location):
 
-    if 'MM' in location:
-        location = string.capwords(location)
-        location = location.split(' ')
+    location = spec_capwords(location)
+    location = location.split(' ')
+    
+    if '@' in location: 
+        location[location.index('@')] = 'at'
+
+    if 'Mm' in location:
         mm_index = location.index('Mm')
 
-        mile_marker = location[mm_index-1]
-
-        location[mm_index-1], location[mm_index] = 'near', 'mile marker'
+        location[mm_index] = 'mile marker'
         location.append(mile_marker)
 
-        location = ' '.join(location)
-
-    else: 
-
-        location = string.capwords(location)
+    location = ' '.join(location)
 
     return location
 
@@ -46,10 +44,88 @@ def sex_convert(sex):
         pronoun = 'she'
     return sex, pronoun
 
-# Get appropriate jursidicition 
-def get_jurisdiction(city, county):
-    return string.capwords(county) + " County"
+# Process county name
+def county_process(county):
+    return spec_capwords(county) + " County"
 
+# Process city name
+def city_process(city):
+    city = city.split(' ')
+
+    if len(city) > 1 and len(city[-1]) == 2:
+        # If the city is a city in Arkansas, remove AR
+        if city[-1] == "AR":
+            city = city[:-1]
+            city = spec_capwords(' '.join(i for i in city))
+
+        # Can assume that the last word in city is a state abreviation
+        else : 
+            state = city[-1]
+            city = spec_capwords(' '.join(i for i in city[:-1]))
+            city = city + state
+    else: 
+        city = spec_capwords(' '.join(i for i in city))
+
+    return city
+
+# Specialized capwords function 
+def spec_capwords(words):
+
+    words = words.upper()
+
+    # words in which no letters should be capitalized 
+    not_cap = ['OF', 'ON', 'A', 'THE', 'IN', 'AT', 'MILE', 'MARKER', 'MILE-MARKER', 'UNSPECIFIED', 'VEHICLE']
+
+    # words in which all letters should be capitalized
+    all_cap = ['GMC', 'US', 'U.S','U.S.', 'AR', 'NW']
+
+    # cardinal directions are capitalized when part of a proper noun
+    directions = ['NORTH', 'SOUTH', 'EAST', 'WEST']
+
+    # words that should be replaced with other words
+    to_replace = {'MC': 'motorcycle'}
+    keys_to_replace = list(to_replace.keys())
+
+    words = words.split(' ')
+
+    # iterate through words determining which should be capitialized
+    for i in range(len(words)): 
+        if words[i] in not_cap:
+            words[i] = words[i].lower()
+        elif words[i] in all_cap:
+            words[i] = words[i].upper()
+        elif words[i] in directions:
+            try: 
+                following_word = words[i+1]
+            except:
+                words[i] = words[i].lower()
+            # lowercase cardinal direction if indicates a direction
+            if following_word in ['OF', 'ON', 'IN']:
+                words[i] = words[i].lower()
+            else: 
+                words[i] = words[i].capitalize()
+        elif words[i] in keys_to_replace:
+            words[i] = to_replace[words[i]]
+        else: 
+            words[i] = words[i].capitalize()
+
+    words = ' '.join(word for word in words)
+
+    return words
+
+# Convert directions into cardinal directions 
+def direction_convert(direction):
+    direction = direction.lower()
+    match direction:
+        case 'sb':
+            direction = 'south'
+        case 'nb':
+            direction = 'north'
+        case 'eb':
+            direction = 'east'
+        case 'wb':
+            direction = 'west'
+    return(direction)
 
 # Generate lede for message 
 def gen_lede (fatal_dict):
@@ -67,8 +143,7 @@ def gen_lede (fatal_dict):
     location = location_convert(fatal_dict['location'])
 
     # Get and process county 
-    county = string.capwords(fatal_dict['county']) + ' County'
-    jursidiction = get_jurisdiction(fatal_dict['city'], fatal_dict['county'])
+    county = county_process(fatal_dict['county'])
 
     # Names of the deceased 
     deceased = list(fatal_dict['deceased'].keys())
@@ -83,11 +158,34 @@ def gen_lede (fatal_dict):
     if num_deceased == 1:
 
         # Get details of the single deceased person 
-        deceased_dict = fatal_dict['deceased'][deceased[0]]
-        residence = string.capwords(deceased_dict['RESIDENCE'])
+        name = deceased[0]
+        deceased_dict = fatal_dict['deceased'][name]
+        residence = city_process(deceased_dict['RESIDENCE'])
         sex = sex_convert(deceased_dict['M/F'])[0]
 
-        lede = "A " + residence + " " + sex + " died in a " + num_vehicles[0] + "-vehicle accident " +  week_day +  " on " + location  + " in " + jursidiction + ".\n"
+        # If there was only one vehicle involved, change "one" to "single"
+        num_vehicles = num_vehicles[0] if not num_vehicles[0] == "one" else "single"
+
+        # Make sure the deceased person has a residence 
+        if residence: 
+
+            # Determine lead article
+            article = "A"
+
+            if residence[0] == "A":
+                article = "An"
+
+            lede = article + " " + residence + " " + sex + " died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n"
+
+        # If no residence listed for deceased person, try to lead with their sex 
+        elif sex:
+            lede = "A " + sex + " died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n" 
+
+        # If no sex is listed, the person is not a juvenile, lead with person
+        elif name == 'JUVENILE':
+            lede = "A juvenile died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n" 
+        else: 
+            lede = "A person died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n" 
 
     # If more than one person died in the accident, lead with the number dead
     else: 
@@ -95,9 +193,18 @@ def gen_lede (fatal_dict):
 
         # If the number of people dead is in word format
         if num_deceased[1]: 
-            lede = num_deceased[0].capitalize() + " people died in an accident " + week_day + " involving " + num_vehicles[0] + " vehicles on " + location  + ' in ' + jursidiction + ".\n"
+            lede = num_deceased[0].capitalize() + " people died in an accident " + week_day + " involving " + num_vehicles[0] + " vehicles on " + location  + ' in ' + county + ".\n"
         else: 
-            lede = "A " + num_vehicles[0] + " vehicle accident claimed the lives of " + num_deceased[0] + " on " + location + ' in ' + jursidiction +  " " + week_day + ".\n"
+            # If there was only one vehicle involved, change "one" to "single"
+            num_vehicles = num_vehicles[0] if not num_vehicles[0] == "one" else "single"
+
+            # Determine lead article
+            article = "A"
+
+            if num_vehicles[0] == "A":
+                article = "An"
+
+            lede = article + num_vehicles + "-vehicle accident claimed the lives of " + num_deceased[0] + " on " + location + ' in ' + county +  " " + week_day + ".\n"
 
     return lede
 
@@ -115,21 +222,40 @@ def gen_narrative(fatal_dict):
     counter = 0
 
     for name in names: 
+        # Get details 
         deceased_dict = fatal_dict['deceased'][name]
         age = deceased_dict['AGE']
         sex = deceased_dict['M/F']
         role = deceased_dict['ROLE']
 
+        if age.lower() == "unknown":
+            age = "of unknown age"
+
         if role == 'PEDESTRIAN':
-            narrative = narrative +  string.capwords(name) + ", " + age + "was listed as a pedestrian in a report from Arkansas State Police. "
+            narrative = narrative +  spec_capwords(name) + ", " + age + "was listed as a pedestrian in a report from Arkansas State Police. "
         else: 
             vehicle_num = deceased_dict['VEHICLE']
-            vehicle_details = fatal_dict['vehicles'][vehicle_num]
+
+            # Ensure direction and vehicle type included 
+            try: 
+                vehicle_details = fatal_dict['vehicles'][vehicle_num]
+            except:
+                vehicle_details = {}
+
+            try:
+                direction = vehicle_details['DIRECTION']
+            except:
+                direction = "in an unspecified direction"
+            try:
+                vehicle = vehicle_details['VEHICLE']
+            except:
+                vehicle = "unspecified vehicle"
+
 
             if role == 'DRIVER':
-                narrative = narrative + string.capwords(name) + ", " + age + ", was driving " + vehicle_details['DIRECTION'].lower() + " in a " + vehicle_details['VEHICLE'].lower() + ". "
+                narrative = narrative + spec_capwords(name) + ", " + age + ", was driving " + direction_convert(direction) + " in a " + spec_capwords(vehicle) +". "
             else: 
-                narrative = narrative + string.capwords(name) + ", " + age + ", was riding in a " + vehicle_details['VEHICLE'].lower() + " headed " + vehicle_details['DIRECTION'].lower() + ". "
+                narrative = narrative + spec_capwords(name) + ", " + age + ", was riding in a " + spec_capwords(vehicle) + " headed " + direction_convert(direction) + ". "
     narrative = narrative + "\n"
 
     return narrative
@@ -143,7 +269,7 @@ def gen_injuries(injured, hospital):
     # Get the number of people who died in the accident 
     num_injured = len(injured)
 
-    hospital = string.capwords(hospital)
+    hospital = spec_capwords(hospital)
 
     # More than one person was injuried, just list how many people were injured
     if num_injured > 1 : 
@@ -160,7 +286,7 @@ def gen_injuries(injured, hospital):
         injured_residence = injured[injured_name]['RESIDENCE']
         injured_sex = injured[injured_name]['M/F']
 
-        blurb = string.capwords(injured_name) + "," + injured_age + ", of " + string.capwords(injured_residence) + " was injured in the accident. "
+        blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. "
         
         blurb = blurb + sex_convert(injured_sex)[1].capitalize()
 
@@ -190,7 +316,7 @@ def gen_conditions(weather, road):
 
         match version:
             case 1: 
-                sentence = "The weather was " + weather + " and the road was " + road + ", according to the report."
+                sentence = "The weather was " + weather + " and the road was " + road + ", according to the report.\n"
             case 2: 
                 sentence = "Police reported the weather was " + weather + " and the road was " + road + ".\n"
 
@@ -215,7 +341,3 @@ def gen_msg (fatal_dict, driver):
     message = message + "Read the full report here: " + driver.current_url 
 
     print(message)
-
-
-
-

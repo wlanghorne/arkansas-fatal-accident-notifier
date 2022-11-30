@@ -100,7 +100,7 @@ def get_victim_tables(rows):
 
         # Get the deceased person's name
         deceased_cell = cells[0].get_attribute('innerHTML').strip()
-        deceased_name = deceased_cell.split('(')[0]
+        deceased_name = deceased_cell.split('(')[0].strip()
         deceased_vehicle_num = ''.join(n for n in deceased_cell.split('(')[1][:-1] if n.isdigit())
 
         # Get deceased person's age
@@ -126,52 +126,57 @@ def get_additional_victims(row):
     try:
         cell = row.find_element(By.CSS_SELECTOR, 'td')
     except: 
-        return False
-    else: 
-        # Clean data string
-        data = cell.get_attribute('innerHTML').strip().split(' ')
-        data = list(filter(None, data))
+        return False 
+    # Clean data string
+    data = cell.get_attribute('innerHTML').strip().split(' ')
+    data = list(filter(None, data))
 
-        # List containing the expected order of variables for each victim
-        data_vars = ['NAME', 'AGE', 'RESIDENCE', 'M/F', 'DRIVER', 'PASSENGER', 'PEDESTRIAN']
-        curr_var = 'NAME'
+    # List containing the expected order of variables for each victim
+    data_vars = ['NAME', 'AGE', 'RESIDENCE', 'M/F', 'DRIVER', 'PASSENGER', 'PEDESTRIAN']
+    curr_var = 'NAME'
 
-        # Dictionary to hold info in individual victims, a variable to hold the data for the current variable and a variable to hold the victim's name
-        victim_dict = {}
-        curr_data = ''
-        name = ''
-        
-        # Iterate through data using variable names as markers 
-        data_length = len(data)
-        for n in range(data_length):
-            i = data[n].strip(':')
-            # Check to see if reached vechile number
-            if 'NAME' in curr_var: 
-                if '(' in i:
-                    name = curr_data
-                    victim_dict[name] = {}
-                    victim_dict[name]['VEHICLE'] = ''.join(n for n in i if n.isdigit())
-            # Get log curr_data if reach a new variable or the end of the list
-            has_new_var = False
-            for var in data_vars:
-                if var in i or data_length - n == 1: 
-                    if curr_var in ['AGE', 'RESIDENCE', 'M/F']:
+    # Dictionary to hold info in individual victims, a variable to hold the data for the current variable and a variable to hold the victim's name
+    victim_dict = {}
+    curr_data = ''
+    name = ''
+    
+    # Iterate through data using variable names as markers 
+    data_length = len(data)
+    for n in range(data_length):
+        i = data[n].strip(':')
+        # Check to see if reached vechile number
+        if 'NAME' in curr_var: 
+            if '(' in i:
+                name = curr_data.strip()
+                name = name if name else 'UNKNOWN'
+                victim_dict[name] = {}
+                victim_dict[name]['VEHICLE'] = ''.join(n for n in i if n.isdigit())
+        # Get log curr_data if reach a new variable or the end of the list
+        has_new_var = False
+        for var in data_vars:
+            if var in i or data_length - n == 1: 
+                if curr_var in ['AGE', 'RESIDENCE', 'M/F']:
+                    if name: 
                         victim_dict[name][curr_var] = curr_data
-                    elif curr_var in ['DRIVER', 'PASSENGER', 'PEDESTRIAN']:
-                        if 'X' in curr_data:
-                            victim_dict[name]['ROLE'] = curr_var
-                    curr_var = i
-                    curr_data = ''
-                    has_new_var = True
-                    break
-            # Append new entry to current data 
-            if not has_new_var: 
-                if curr_data:
-                    curr_data = curr_data + ' ' + i
-                else: 
-                    curr_data = i
+                elif curr_var in ['DRIVER', 'PASSENGER', 'PEDESTRIAN']:
+                    if 'X' in curr_data and name:
+                        victim_dict[name]['ROLE'] = curr_var
+                curr_var = i
+                curr_data = ''
+                has_new_var = True
+                break
+        # Append new entry to current data 
+        if not has_new_var: 
+            if curr_data:
+                curr_data = curr_data + ' ' + i
+            else: 
+                curr_data = i
+   
+    # Delete any key value pair with a key of "UNKNOWN"
+    if 'UNKNOWN' in list(victim_dict.keys()):
+        del(victim_dict['UNKNOWN'])
 
-        return victim_dict
+    return victim_dict
 
 def get_vehicle_data(rows): 
     # Iterate through rows and pull data out of cells 
@@ -222,6 +227,7 @@ def get_additional_vehicles(row):
         vehicle_dict = {}
         curr_data = ''
         vehicle = ''
+        vehicle_num = ''
         
         # Iterate through data using variable names as markers 
         data_length = len(data)
@@ -254,7 +260,7 @@ def get_additional_vehicles(row):
                 else: 
                     curr_data = i
             # If there are no more items in the list, add curr_data to the dictionary 
-            if data_length - n == 1: 
+            if data_length - n == 1 and vehicle_dict: 
                  vehicle_dict[vehicle_num][curr_var] = curr_data
 
         return vehicle_dict 
