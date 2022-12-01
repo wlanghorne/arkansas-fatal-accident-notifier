@@ -112,7 +112,7 @@ def get_victim_tables(rows):
         # Get deceased person's sex 
         sex = cells[3].get_attribute('innerHTML').split('&nbsp')[0].strip()
 
-        role = get_victim_role(cells[4:6])
+        role = get_victim_role(cells[4:7])
 
         # Put data into dictionary 
         victim_dict[deceased_name] = {'VEHICLE': deceased_vehicle_num, 'AGE': deceased_age, 'RESIDENCE': city_of_res, 'M/F': sex, 'ROLE': role}

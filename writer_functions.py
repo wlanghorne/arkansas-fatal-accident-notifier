@@ -77,7 +77,7 @@ def spec_capwords(words):
     not_cap = ['OF', 'ON', 'A', 'THE', 'IN', 'AT', 'MILE', 'MARKER', 'MILE-MARKER', 'UNSPECIFIED', 'VEHICLE']
 
     # words in which all letters should be capitalized
-    all_cap = ['GMC', 'US', 'U.S','U.S.', 'AR', 'NW']
+    all_cap = ['GMC', 'US', 'U.S','U.S.', 'AR', 'NW', 'I', 'II', 'III', 'IV', 'V']
 
     # cardinal directions are capitalized when part of a proper noun
     directions = ['NORTH', 'SOUTH', 'EAST', 'WEST']
@@ -97,13 +97,13 @@ def spec_capwords(words):
         elif words[i] in directions:
             try: 
                 following_word = words[i+1]
+                # lowercase cardinal direction if indicates a direction
+                if following_word in ['OF', 'ON', 'IN', 'WAS']:
+                    words[i] = words[i].lower()
+                else: 
+                    words[i] = words[i].capitalize()
             except:
                 words[i] = words[i].lower()
-            # lowercase cardinal direction if indicates a direction
-            if following_word in ['OF', 'ON', 'IN']:
-                words[i] = words[i].lower()
-            else: 
-                words[i] = words[i].capitalize()
         elif words[i] in keys_to_replace:
             words[i] = to_replace[words[i]]
         else: 
@@ -221,6 +221,7 @@ def gen_narrative(fatal_dict):
 
     counter = 0
 
+    # Add details about each deceased person
     for name in names: 
         # Get details 
         deceased_dict = fatal_dict['deceased'][name]
@@ -228,13 +229,17 @@ def gen_narrative(fatal_dict):
         sex = deceased_dict['M/F']
         role = deceased_dict['ROLE']
 
+        # Variable for the vehicles the deceased people were in
+        deceased_vehicles = []
+
         if age.lower() == "unknown":
             age = "of unknown age"
 
         if role == 'PEDESTRIAN':
-            narrative = narrative +  spec_capwords(name) + ", " + age + "was listed as a pedestrian in a report from Arkansas State Police. "
+            narrative = narrative +  spec_capwords(name) + ", " + age + ", was listed as a pedestrian in a report from Arkansas State Police. "
         else: 
             vehicle_num = deceased_dict['VEHICLE']
+            deceased_vehicles.append(vehicle_num)
 
             # Ensure direction and vehicle type included 
             try: 
@@ -251,11 +256,35 @@ def gen_narrative(fatal_dict):
             except:
                 vehicle = "unspecified vehicle"
 
-
             if role == 'DRIVER':
                 narrative = narrative + spec_capwords(name) + ", " + age + ", was driving " + direction_convert(direction) + " in a " + spec_capwords(vehicle) +". "
             else: 
                 narrative = narrative + spec_capwords(name) + ", " + age + ", was riding in a " + spec_capwords(vehicle) + " headed " + direction_convert(direction) + ". "
+
+    vehicle_nums = list(fatal_dict['vehicles'].keys())
+
+    # Include details about other vehicles in the accident 
+    for vehicle_num in vehicle_nums:
+        if vehicle_num not in deceased_vehicles:
+
+            vehicle_details = fatal_dict['vehicles'][vehicle_num]
+
+            try:
+                direction = vehicle_details['DIRECTION']
+            except:
+                direction = "in an unspecified direction"
+            try:
+                vehicle = vehicle_details['VEHICLE']
+            except:
+                vehicle = "unspecified vehicle"
+
+            # Determine lead article
+            article = "A"
+
+            if vehicle[0] == "A":
+                article = "An"
+            narrative = narrative + article + " " + spec_capwords(vehicle)+ " headed " + spec_capwords(direction) + " was also involved in the accident. "
+
     narrative = narrative + "\n"
 
     return narrative
@@ -273,11 +302,11 @@ def gen_injuries(injured, hospital):
 
     # More than one person was injuried, just list how many people were injured
     if num_injured > 1 : 
-        blurb = "There were " + news_num_convert(num_injured)[0] + " other people injuried in the crash. Those injured were taken to " + hospital + ".\n"
+        blurb = "There were " + news_num_convert(num_injured)[0] + " other people injuried. Those injured were taken to " + hospital + ".\n"
 
     # If there were no other injuries 
     elif num_injured == 0 : 
-        blurb = "No other injuries or deaths were reported from the crash.\n"
+        blurb = "No other injuries or deaths were reported.\n"
 
     # If there was only one other injury 
     else: 
