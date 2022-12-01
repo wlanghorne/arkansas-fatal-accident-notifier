@@ -74,10 +74,10 @@ def spec_capwords(words):
     words = words.upper()
 
     # words in which no letters should be capitalized 
-    not_cap = ['OF', 'ON', 'A', 'THE', 'IN', 'AT', 'MILE', 'MARKER', 'MILE-MARKER', 'UNSPECIFIED', 'VEHICLE']
+    not_cap = ['OF', 'ON', 'A', 'THE', 'IN', 'AT', 'MILE', 'AND', 'MARKER', 'MILE-MARKER', 'UNSPECIFIED', 'VEHICLE']
 
     # words in which all letters should be capitalized
-    all_cap = ['GMC', 'US', 'U.S','U.S.', 'AR', 'NW', 'I', 'II', 'III', 'IV', 'V']
+    all_cap = ['GMC', 'US', 'U.S','U.S.', 'AR', 'NW', 'I', 'II', 'III', 'IV', 'V', 'UAMS', 'KIA']
 
     # cardinal directions are capitalized when part of a proper noun
     directions = ['NORTH', 'SOUTH', 'EAST', 'WEST']
@@ -208,6 +208,28 @@ def gen_lede (fatal_dict):
 
     return lede
 
+# Gets the vehicle type and heading 
+def get_vehicle_details(vehicle_dict, vehicle_num):
+    # Ensure direction and vehicle type included 
+    try: 
+        vehicle_details = vehicle_dict[vehicle_num]
+    except:
+        direction = "in an unspecified direction"
+        vehicle = "unspecified vehicle"
+        return vehicle, direction
+
+    try:
+        direction = vehicle_details['DIRECTION']
+    except:
+        direction = "in an unspecified direction"
+    try:
+        vehicle = vehicle_details['VEHICLE']
+    except:
+        vehicle = "unspecified vehicle"
+
+    return spec_capwords(vehicle), spec_capwords(direction)
+
+
 # Generate narrative of the crash
 def gen_narrative(fatal_dict):
 
@@ -241,20 +263,7 @@ def gen_narrative(fatal_dict):
             vehicle_num = deceased_dict['VEHICLE']
             deceased_vehicles.append(vehicle_num)
 
-            # Ensure direction and vehicle type included 
-            try: 
-                vehicle_details = fatal_dict['vehicles'][vehicle_num]
-            except:
-                vehicle_details = {}
-
-            try:
-                direction = vehicle_details['DIRECTION']
-            except:
-                direction = "in an unspecified direction"
-            try:
-                vehicle = vehicle_details['VEHICLE']
-            except:
-                vehicle = "unspecified vehicle"
+            vehicle, direction = get_vehicle_details(fatal_dict['vehicles'], vehicle_num)
 
             if role == 'DRIVER':
                 narrative = narrative + spec_capwords(name) + ", " + age + ", was driving " + direction_convert(direction) + " in a " + spec_capwords(vehicle) +". "
@@ -267,16 +276,7 @@ def gen_narrative(fatal_dict):
     for vehicle_num in vehicle_nums:
         if vehicle_num not in deceased_vehicles:
 
-            vehicle_details = fatal_dict['vehicles'][vehicle_num]
-
-            try:
-                direction = vehicle_details['DIRECTION']
-            except:
-                direction = "in an unspecified direction"
-            try:
-                vehicle = vehicle_details['VEHICLE']
-            except:
-                vehicle = "unspecified vehicle"
+            vehicle, direction = get_vehicle_details(fatal_dict['vehicles'], vehicle_num)
 
             # Determine lead article
             article = "A"
@@ -291,14 +291,16 @@ def gen_narrative(fatal_dict):
 
 
 # Generate sentences about how many people were injured and where they were transported
-def gen_injuries(injured, hospital):
+def gen_injuries(fatal_dict):
+
+    injured = fatal_dict['injured']
+    hospital = spec_capwords(fatal_dict['hospital'])
+
     # Var to hold blurb about injuries 
     blurb = ""
 
     # Get the number of people who died in the accident 
     num_injured = len(injured)
-
-    hospital = spec_capwords(hospital)
 
     # More than one person was injuried, just list how many people were injured
     if num_injured > 1 : 
@@ -314,12 +316,28 @@ def gen_injuries(injured, hospital):
         injured_age = injured[injured_name]['AGE']
         injured_residence = injured[injured_name]['RESIDENCE']
         injured_sex = injured[injured_name]['M/F']
+        role = injured[injured_name]['ROLE']
 
-        blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. "
+        pronoun = sex_convert(injured_sex)[1].capitalize()
+
+        if role == 'PEDESTRIAN':
+            blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
+            blurb = blurb + pronoun + " was listed as a pedestrian in the report and was transported to " + hospital + ".\n"
         
-        blurb = blurb + sex_convert(injured_sex)[1].capitalize()
+        elif role == 'DRIVER': 
+            vehicle_num = injured[injured_name]['VEHICLE']
+            vehicle, direction = get_vehicle_details(fatal_dict['vehicles'], vehicle_num)
+            blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
+            blurb = blurb + pronoun + " was driving the " + vehicle + " and was transported to " + hospital + ".\n"
+        elif role == 'PASSENGER':
+            vehicle_num = injured[injured_name]['VEHICLE']
+            vehicle, direction = get_vehicle_details(fatal_dict['vehicles'], vehicle_num)
+            blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
+            blurb = blurb + pronoun + " was riding in the " + vehicle + " and was transported to " + hospital + ".\n"
 
-        blurb = blurb + " was transported to " + hospital + ".\n"
+        else: 
+            blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
+            blurb = blurb + pronoun + " was transported to " + hospital + ".\n"
 
     return blurb
 
@@ -328,7 +346,7 @@ def gen_conditions(weather, road):
     # Var to hold sentence about road/weather 
     sentence = ""
 
-    if "rain" in weather or "snow" in weather:
+    if "rain" in weather or "snow" in weather or "fog" in weather:
 
         # Randomly pick version of sentence to include in the message
         version = random.randint(1, 2)
@@ -361,7 +379,7 @@ def gen_msg (fatal_dict, driver):
     message = message + gen_narrative(fatal_dict)
 
     # Add details about those injured
-    message = message + gen_injuries(fatal_dict['injured'], fatal_dict['hospital'])
+    message = message + gen_injuries(fatal_dict)
 
     # Mention weather/road conditions
     message = message + gen_conditions(fatal_dict['weather_conditions'].lower(), fatal_dict['road_conditions'].lower())

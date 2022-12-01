@@ -48,7 +48,7 @@ open_fatal_log(driver, url)
 latest_fatal_num, latest_fatal_link = get_latest_fatal(driver)
 
 # LINK CHANGE FOR TESTING PURPOSES 
-latest_fatal_link = 'https://www.ark.org/asp-fatal/index.php?do=view_reports&accident_number=458&year_rec=2022'
+latest_fatal_link = 'https://www.ark.org/asp-fatal/index.php?do=view_reports&accident_number=497&year_rec=2022'
 
 # Compare the last fatal to the latest fatal. Program with exit if updating is not required
 to_update_fatals(old_fatal_num, latest_fatal_num, driver)
