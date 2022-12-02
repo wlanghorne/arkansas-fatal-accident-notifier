@@ -1,20 +1,12 @@
-from datetime import datetime 
-from email.mime.text import MIMEText
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
+from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
-import csv
-import json
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 import os
-import shutil
-import base64
-from time import sleep
+
 
 # Get the number of the last recorded fatal 
 def get_old_fatal(path):
@@ -378,4 +370,42 @@ def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
     hospital = rows[4].find_element(By.CSS_SELECTOR, 'u').get_attribute('innerHTML').strip().replace('&nbsp;', '')
     fatal_dict['hospital'] = hospital
 
-    return(fatal_dict)  
+    return fatal_dict  
+
+# Scrape page 
+def scrape_page (driver_path, url, old_fatal_path):
+
+    # Get the number of the last fatal car accident processed 
+    old_fatal_num = get_old_fatal(old_fatal_path)
+
+    # Initiate driver
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    s = Service(driver_path)
+    driver = webdriver.Chrome(service=s, options=chrome_options)
+
+    # Open latest year
+    open_fatal_log(driver, url)
+
+    # Get the number of the latest fatal car accident
+    latest_fatal_num, latest_fatal_link = get_latest_fatal(driver)
+
+    # LINK CHANGE FOR TESTING PURPOSES 
+    latest_fatal_link = 'https://www.ark.org/asp-fatal/index.php?do=view_reports&accident_number=497&year_rec=2022'
+
+    # Compare the last fatal to the latest fatal. Program with exit if updating is not required
+    to_update_fatals(old_fatal_num, latest_fatal_num, driver)
+
+    # Write latest fatal to last fatal file
+    write_latest_fatal(latest_fatal_num, old_fatal_path)
+
+    # Open latest fatal file and get info
+    fatal_dict = get_latest_data(driver, latest_fatal_num, latest_fatal_link)
+
+    # Get the url needed to access the report 
+    report_url = driver.current_url
+
+    # Quit driver 
+    driver.quit()
+
+    return fatal_dict, report_url

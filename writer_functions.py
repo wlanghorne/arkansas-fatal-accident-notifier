@@ -374,7 +374,7 @@ def gen_conditions(weather, road):
     return sentence
 
 # Generate a message based on the info in the last fatal file 
-def gen_msg (fatal_dict, driver):
+def gen_msg (fatal_dict, url):
 
     # Generate a lede for the message 
     message = gen_lede(fatal_dict)
@@ -389,6 +389,6 @@ def gen_msg (fatal_dict, driver):
     message = message + gen_conditions(fatal_dict['weather_conditions'].lower(), fatal_dict['road_conditions'].lower())
 
     # Include link to full report 
-    message = message + "Read the full report here: " + driver.current_url 
+    message = message + "Read the full report here: " + url 
 
     return message
