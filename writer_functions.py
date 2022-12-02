@@ -175,17 +175,17 @@ def gen_lede (fatal_dict):
             if residence[0] == "A":
                 article = "An"
 
-            lede = article + " " + residence + " " + sex + " died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n"
+            lede = article + " " + residence + " " + sex + " died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + "."
 
         # If no residence listed for deceased person, try to lead with their sex 
         elif sex:
-            lede = "A " + sex + " died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n" 
+            lede = "A " + sex + " died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + "." 
 
         # If no sex is listed, the person is not a juvenile, lead with person
         elif name == 'JUVENILE':
-            lede = "A juvenile died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n" 
+            lede = "A juvenile died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + "." 
         else: 
-            lede = "A person died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + ".\n" 
+            lede = "A person died in a " + num_vehicles + "-vehicle accident " +  week_day +  " on " + location  + " in " + county + "." 
 
     # If more than one person died in the accident, lead with the number dead
     else: 
@@ -193,7 +193,7 @@ def gen_lede (fatal_dict):
 
         # If the number of people dead is in word format
         if num_deceased[1]: 
-            lede = num_deceased[0].capitalize() + " people died in an accident " + week_day + " involving " + num_vehicles[0] + " vehicles on " + location  + ' in ' + county + ".\n"
+            lede = num_deceased[0].capitalize() + " people died in an accident " + week_day + " involving " + num_vehicles[0] + " vehicles on " + location  + ' in ' + county + "."
         else: 
             # If there was only one vehicle involved, change "one" to "single"
             num_vehicles = num_vehicles[0] if not num_vehicles[0] == "one" else "single"
@@ -204,8 +204,9 @@ def gen_lede (fatal_dict):
             if num_vehicles[0] == "A":
                 article = "An"
 
-            lede = article + num_vehicles + "-vehicle accident claimed the lives of " + num_deceased[0] + " on " + location + ' in ' + county +  " " + week_day + ".\n"
+            lede = article + num_vehicles + "-vehicle accident claimed the lives of " + num_deceased[0] + " on " + location + ' in ' + county +  " " + week_day + "."
 
+    lede = lede + "\n \n"
     return lede
 
 # Gets the vehicle type and heading 
@@ -285,7 +286,7 @@ def gen_narrative(fatal_dict):
                 article = "An"
             narrative = narrative + article + " " + spec_capwords(vehicle)+ " headed " + spec_capwords(direction) + " was also involved in the accident. "
 
-    narrative = narrative + "\n"
+    narrative = narrative + "\n \n"
 
     return narrative
 
@@ -304,11 +305,11 @@ def gen_injuries(fatal_dict):
 
     # More than one person was injuried, just list how many people were injured
     if num_injured > 1 : 
-        blurb = "There were " + news_num_convert(num_injured)[0] + " other people injuried. Those injured were taken to " + hospital + ".\n"
+        blurb = "There were " + news_num_convert(num_injured)[0] + " other people injuried. Those injured were taken to " + hospital + "."
 
     # If there were no other injuries 
     elif num_injured == 0 : 
-        blurb = "No other injuries or deaths were reported.\n"
+        blurb = "No other injuries or deaths were reported."
 
     # If there was only one other injury 
     else: 
@@ -322,22 +323,24 @@ def gen_injuries(fatal_dict):
 
         if role == 'PEDESTRIAN':
             blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
-            blurb = blurb + pronoun + " was listed as a pedestrian in the report and was transported to " + hospital + ".\n"
+            blurb = blurb + pronoun + " was listed as a pedestrian in the report and was transported to " + hospital + "."
         
         elif role == 'DRIVER': 
             vehicle_num = injured[injured_name]['VEHICLE']
             vehicle, direction = get_vehicle_details(fatal_dict['vehicles'], vehicle_num)
             blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
-            blurb = blurb + pronoun + " was driving the " + vehicle + " and was transported to " + hospital + ".\n"
+            blurb = blurb + pronoun + " was driving the " + vehicle + " and was transported to " + hospital + "."
         elif role == 'PASSENGER':
             vehicle_num = injured[injured_name]['VEHICLE']
             vehicle, direction = get_vehicle_details(fatal_dict['vehicles'], vehicle_num)
             blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
-            blurb = blurb + pronoun + " was riding in the " + vehicle + " and was transported to " + hospital + ".\n"
+            blurb = blurb + pronoun + " was riding in the " + vehicle + " and was transported to " + hospital + "."
 
         else: 
             blurb = spec_capwords(injured_name) + ", " + injured_age + ", of " + city_process(injured_residence) + " was injured in the accident. " 
-            blurb = blurb + pronoun + " was transported to " + hospital + ".\n"
+            blurb = blurb + pronoun + " was transported to " + hospital + "."
+
+    blurb = blurb + "\n \n"
 
     return blurb
 
@@ -353,9 +356,9 @@ def gen_conditions(weather, road):
 
         match version:
             case 1: 
-                sentence = "There was " + weather + " at the time of the accident and the road was " + road + ", according to the report.\n"
+                sentence = "There was " + weather + " at the time of the accident and the road was " + road + ", according to the report."
             case 2: 
-                sentence = "Police reported there was " + weather + " at the time of the accident and the road was " + road + ".\n"
+                sentence = "Police reported there was " + weather + " at the time of the accident and the road was " + road + "."
     else:
 
         # Randomly pick version of sentence to include in the message
@@ -363,10 +366,11 @@ def gen_conditions(weather, road):
 
         match version:
             case 1: 
-                sentence = "The weather was " + weather + " and the road was " + road + ", according to the report.\n"
+                sentence = "The weather was " + weather + " and the road was " + road + ", according to the report."
             case 2: 
-                sentence = "Police reported the weather was " + weather + " and the road was " + road + ".\n"
+                sentence = "Police reported the weather was " + weather + " and the road was " + road + "."
 
+    sentence = sentence + "\n \n"
     return sentence
 
 # Generate a message based on the info in the last fatal file 
@@ -387,4 +391,4 @@ def gen_msg (fatal_dict, driver):
     # Include link to full report 
     message = message + "Read the full report here: " + driver.current_url 
 
-    print(message)
+    return message

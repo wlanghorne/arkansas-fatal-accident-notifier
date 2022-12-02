@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from scraper_functions import get_old_fatal, open_fatal_log, get_latest_fatal, to_update_fatals, write_latest_fatal, get_latest_data
 from writer_functions import gen_msg
+from email_functions import gen_email
 from time import sleep
 from datetime import date
 import csv
@@ -60,7 +61,10 @@ write_latest_fatal(latest_fatal_num, old_fatal_path)
 fatal_dict = get_latest_data(driver, latest_fatal_num, latest_fatal_link)
 
 # Take all the info for the latest fatal file and process it into a message that can sent via email
-gen_msg(fatal_dict, driver)
+body = gen_msg(fatal_dict, driver)
+
+# Generate and send email 
+gen_email(body, RECIP_ADDRESSES, SENDER_ADDRESS, PATH_TO_API_FILES)
 
 # Quit driver 
 driver.quit()
