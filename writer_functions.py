@@ -221,10 +221,14 @@ def get_vehicle_details(vehicle_dict, vehicle_num):
 
     try:
         direction = vehicle_details['DIRECTION']
+        if not direction: 
+            vehicle = "unspecified direction"
     except:
         direction = "in an unspecified direction"
     try:
         vehicle = vehicle_details['VEHICLE']
+        if not vehicle: 
+            vehicle = "unspecified vehicle"
     except:
         vehicle = "unspecified vehicle"
 
