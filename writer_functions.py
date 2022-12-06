@@ -77,7 +77,7 @@ def spec_capwords(words):
     not_cap = ['OF', 'ON', 'A', 'THE', 'IN', 'AT', 'MILE', 'AND', 'MARKER', 'MILE-MARKER', 'UNSPECIFIED', 'VEHICLE']
 
     # words in which all letters should be capitalized
-    all_cap = ['GMC', 'US', 'U.S','U.S.', 'AR', 'NW', 'I', 'II', 'III', 'IV', 'V', 'UAMS', 'KIA']
+    all_cap = ['GMC', 'US', 'AR', 'NW', 'I', 'II', 'III', 'IV', 'V', 'UAMS', 'KIA']
 
     # cardinal directions are capitalized when part of a proper noun
     directions = ['NORTH', 'SOUTH', 'EAST', 'WEST']
@@ -92,7 +92,7 @@ def spec_capwords(words):
     for i in range(len(words)): 
         if words[i] in not_cap:
             words[i] = words[i].lower()
-        elif words[i] in all_cap:
+        elif words[i] in all_cap or '.' in words[i]:
             words[i] = words[i].upper()
         elif words[i] in directions:
             try: 

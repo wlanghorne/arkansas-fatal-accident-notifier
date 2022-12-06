@@ -261,6 +261,9 @@ def get_additional_vehicles(row):
 # Open link to and get information on the latest fatal accident 
 def get_latest_data(driver, latest_fatal_num, latest_fatal_link):
 
+    # FOR TESTING PURPOSES ONLY. UNCOMMENT CLICK CODE BELOW WHEN DONE
+    #driver.get(latest_fatal_link)
+
     # Open the latest fatal link 
     latest_fatal_link.click()
 
@@ -387,6 +390,8 @@ def scrape_page (driver_path, url, old_fatal_path):
     # Get the number of the latest fatal car accident
     latest_fatal_num, latest_fatal_link = get_latest_fatal(driver)
 
+    # LINK CHANGE FOR TESTING PURPOSES 
+    #latest_fatal_link = 'https://www.ark.org/asp-fatal/index.php?do=view_reports&accident_number=500&year_rec=2022'
 
     # Compare the last fatal to the latest fatal. Program with exit if updating is not required
     to_update_fatals(old_fatal_num, latest_fatal_num, driver)
